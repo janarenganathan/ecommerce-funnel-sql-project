@@ -142,10 +142,11 @@ Run 05_source_analysis.sql and 06_device_analysis.sql
 Step 6: Revenue
 
 Run 07_revenue.sql
-
-<img width="935" height="526" alt="Screenshot 2025-12-05 212157" src="https://github.com/user-attachments/assets/7b3ad6fe-cf80-489c-8faa-816f7c169cd4" />
-<img width="940" height="530" alt="Screenshot 2025-12-05 212140" src="https://github.com/user-attachments/assets/ada92879-c5dd-4193-955e-26b8e62ed8e3" />
 <img width="945" height="532" alt="Screenshot 2025-12-05 212121" src="https://github.com/user-attachments/assets/acdd9abe-a6ad-4768-bb40-324b974d8dbd" />
+<img width="940" height="530" alt="Screenshot 2025-12-05 212140" src="https://github.com/user-attachments/assets/ada92879-c5dd-4193-955e-26b8e62ed8e3" />
+<img width="935" height="526" alt="Screenshot 2025-12-05 212157" src="https://github.com/user-attachments/assets/7b3ad6fe-cf80-489c-8faa-816f7c169cd4" />
+
+
 
 🎓 About the Author
 
