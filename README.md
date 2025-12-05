@@ -30,27 +30,6 @@ Data Visualization	Power BI
 Dataset	CSV (1,000 user sessions)
 Version Control	GitHub
 
-
- 📁 Project Structure
-ecommerce-funnel-sql-project/
-│
-├─ data/
-│   ├─ events_new_1000.csv
-│   └─ orders_new_1000.csv
-│
-├─ sql/
-│   ├─ 01_create_tables.sql
-│   ├─ 02_clean_data.sql
-│   ├─ 03_funnel_session.sql
-│   ├─ 04_conversion_metrics.sql
-│   ├─ 05_source_analysis.sql
-│   ├─ 06_device_analysis.sql
-│   └─ 07_revenue.sql
-│
-└─ dashboard/
-    └─ Ecommerce_Funnel_Dashboard.pbix
-
-
 Each SQL file represents one logical step in the analysis pipeline.
 
 🔍 Data Model
@@ -74,14 +53,21 @@ revenue_by_source → channel performance
 
 🧠 SQL Logic (Summary)
 1️⃣ Create Funnel Flags
+
 MAX(CASE WHEN event_type = 'view' THEN 1 END) AS view_flag,
+
 MAX(CASE WHEN event_type = 'add_to_cart' THEN 1 END) AS cart_flag,
+
 MAX(CASE WHEN event_type = 'checkout' THEN 1 END) AS checkout_flag,
+
 MAX(CASE WHEN event_type = 'purchase' THEN 1 END) AS purchase_flag
 
 2️⃣ Conversion Metrics
+
 SUM(cart_flag) * 100 / SUM(view_flag)           AS view_to_cart_pct,
+
 SUM(checkout_flag) * 100 / SUM(cart_flag)       AS cart_to_checkout_pct,
+
 SUM(purchase_flag) * 100 / SUM(checkout_flag)   AS checkout_to_purchase_pct
 
 3️⃣ Source Segmentation
