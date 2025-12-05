@@ -1,0 +1,194 @@
+01. Create Table 
+
+CREATE DATABASE IF NOT EXISTS ecommerce_project;
+USE ecommerce_project;
+
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS orders;
+
+
+CREATE TABLE events (
+    user_id INT,
+    session_id VARCHAR(30),
+    event_type VARCHAR(30),
+    event_timestamp DATETIME,
+    product_id INT,
+    traffic_source VARCHAR(50),
+    device VARCHAR(20)
+);
+
+
+CREATE TABLE orders (
+    order_id VARCHAR(30),
+    user_id INT,
+    order_amount INT,
+    order_timestamp DATETIME,
+    payment_method VARCHAR(30)
+);
+
+02. clean data 
+
+USE ecommerce_project;
+
+DROP TABLE IF EXISTS events_clean;
+
+CREATE TABLE events_clean AS
+SELECT
+    user_id,
+    session_id,
+    LOWER(TRIM(event_type))       AS event_type,
+    event_timestamp               AS event_timestamp,
+    product_id,
+    LOWER(TRIM(traffic_source))   AS traffic_source,
+    LOWER(TRIM(device))           AS device
+FROM events
+WHERE user_id IS NOT NULL
+  AND session_id IS NOT NULL
+  AND event_timestamp IS NOT NULL;
+
+SELECT COUNT(*) AS total_rows_clean
+FROM events_clean;
+
+SELECT event_type, COUNT(*) AS cnt
+FROM events_clean
+GROUP BY event_type;
+
+03. funnel session
+
+USE ecommerce_project;
+
+DROP TABLE IF EXISTS funnel_session;
+
+CREATE TABLE funnel_session AS
+SELECT
+    session_id,
+    user_id,
+    MAX(CASE WHEN event_type = 'view'        THEN 1 ELSE 0 END) AS view_flag,
+    MAX(CASE WHEN event_type = 'add_to_cart' THEN 1 ELSE 0 END) AS cart_flag,
+    MAX(CASE WHEN event_type = 'checkout'    THEN 1 ELSE 0 END) AS checkout_flag,
+    MAX(CASE WHEN event_type = 'purchase'    THEN 1 ELSE 0 END) AS purchase_flag
+FROM events_clean
+GROUP BY session_id, user_id;
+
+-- Quick sanity check
+SELECT * 
+FROM funnel_session
+LIMIT 10;
+
+SELECT
+    SUM(view_flag)      AS total_sessions_with_view,
+    SUM(cart_flag)      AS total_sessions_with_cart,
+    SUM(checkout_flag)  AS total_sessions_with_checkout,
+    SUM(purchase_flag)  AS total_sessions_with_purchase
+FROM funnel_session;
+
+
+04. conversion metrics  
+
+USE ecommerce_project;
+
+SELECT
+    SUM(view_flag)      AS total_views,
+    SUM(cart_flag)      AS total_carts,
+    SUM(checkout_flag)  AS total_checkouts,
+    SUM(purchase_flag)  AS total_purchases,
+
+    ROUND(SUM(cart_flag)      * 100.0 / NULLIF(SUM(view_flag), 0), 2) AS view_to_cart_pct,
+    ROUND(SUM(checkout_flag)  * 100.0 / NULLIF(SUM(cart_flag), 0), 2) AS cart_to_checkout_pct,
+    ROUND(SUM(purchase_flag)  * 100.0 / NULLIF(SUM(checkout_flag), 0), 2) AS checkout_to_purchase_pct
+FROM funnel_session;
+
+05. source analysis 
+
+USE ecommerce_project;
+
+
+DROP TABLE IF EXISTS session_meta;
+
+CREATE TABLE session_meta AS
+SELECT
+    session_id,
+    MIN(traffic_source) AS traffic_source,
+    MIN(device)         AS device
+FROM events_clean
+GROUP BY session_id;
+
+DROP TABLE IF EXISTS funnel_enriched;
+
+CREATE TABLE funnel_enriched AS
+SELECT
+    f.session_id,
+    f.user_id,
+    f.view_flag,
+    f.cart_flag,
+    f.checkout_flag,
+    f.purchase_flag,
+    m.traffic_source,
+    m.device
+FROM funnel_session f
+LEFT JOIN session_meta m
+  ON f.session_id = m.session_id;
+SELECT
+    traffic_source,
+    SUM(view_flag)     AS views,
+    SUM(cart_flag)     AS carts,
+    SUM(checkout_flag) AS checkouts,
+    SUM(purchase_flag) AS purchases,
+    ROUND(SUM(cart_flag)     * 100.0 / NULLIF(SUM(view_flag), 0), 2) AS view_to_cart_pct,
+    ROUND(SUM(purchase_flag) * 100.0 / NULLIF(SUM(view_flag), 0), 2) AS view_to_purchase_pct
+FROM funnel_enriched
+GROUP BY traffic_source
+ORDER BY view_to_purchase_pct DESC;
+
+
+06. device analysis
+
+
+
+
+USE ecommerce_project;
+
+SELECT
+    device,
+    SUM(view_flag)     AS views,
+    SUM(cart_flag)     AS carts,
+    SUM(checkout_flag) AS checkouts,
+    SUM(purchase_flag) AS purchases,
+    ROUND(SUM(cart_flag)     * 100.0 / NULLIF(SUM(view_flag), 0), 2) AS view_to_cart_pct,
+    ROUND(SUM(purchase_flag) * 100.0 / NULLIF(SUM(view_flag), 0), 2) AS view_to_purchase_pct
+FROM funnel_enriched
+GROUP BY device;
+
+07. revenue
+
+USE ecommerce_project;
+
+
+DROP TABLE IF EXISTS user_source;
+
+CREATE TABLE user_source AS
+SELECT
+    user_id,
+    MIN(traffic_source) AS primary_source
+FROM events_clean
+GROUP BY user_id;
+
+DROP TABLE IF EXISTS revenue_by_source;
+
+CREATE TABLE revenue_by_source AS
+SELECT
+    u.primary_source         AS traffic_source,
+    COUNT(o.order_id)        AS total_orders,
+    SUM(o.order_amount)      AS total_revenue,
+    ROUND(AVG(o.order_amount), 2) AS avg_order_value
+FROM orders o
+LEFT JOIN user_source u
+  ON o.user_id = u.user_id
+GROUP BY u.primary_source;
+
+
+SELECT *
+FROM revenue_by_source
+ORDER BY total_revenue DESC;
+
+
